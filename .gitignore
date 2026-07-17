@@ -36,10 +36,10 @@ ENV/
 # Environment variables
 .env
 
-# Data files (keep structure, ignore content)
+# Local configuration, runtime state, and generated digests
 data/config.json
 data/seen.json
-data/summaries/*.md
+data/summaries/
 data/subscribers.json
 data/mcp.secrets.json
 data/mcp-secrets.json
