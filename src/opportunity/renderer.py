@@ -48,6 +48,10 @@ class StartupRadarRenderer:
                 f"完成 {report.analyzed_count} 条创业信号分析。"
             ),
             "",
+            self._render_funnel(report),
+            "",
+            self._render_source_counts(report.source_counts),
+            "" if report.source_counts else "",
             "## 今天最值得关注",
             "",
         ]
@@ -103,6 +107,31 @@ class StartupRadarRenderer:
             ]
         )
         return "\n".join(lines)
+
+    @staticmethod
+    def _render_funnel(report: RadarReport) -> str:
+        if not report.prefiltered_count:
+            return ""
+        return (
+            f"> 选材漏斗：URL 去重后 {report.deduped_count} 条 → "
+            f"本地零 Token 预筛 {report.prefiltered_count} 条 → "
+            f"AI 轻量初筛 {report.triaged_count} 条 → "
+            f"深度分析 {report.analyzed_count} 条"
+        )
+
+    @staticmethod
+    def _render_source_counts(counts: dict[str, int]) -> str:
+        if not counts:
+            return ""
+        labels = {
+            "reddit": "Reddit 用户痛点",
+            "rss": "多领域 RSS",
+            "google_news": "Google News 商业/消费",
+            "hackernews": "Hacker News",
+            "developer": "GitHub/OSS Insight",
+        }
+        values = [f"{labels.get(key, key)} {value}" for key, value in counts.items()]
+        return "> 送入分析的来源：" + " · ".join(values)
 
     def _render_opportunity(self, index: int, item: ScoredOpportunity) -> list[str]:
         analysis = item.candidate.analysis

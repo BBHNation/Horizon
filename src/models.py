@@ -497,9 +497,27 @@ class StartupRadarConfig(BaseModel):
     database_path: str = "data/startup_radar.db"
     output_dir: str = "data/radar"
     docs_posts_dir: str = "docs/_posts"
-    prompt_version: str = "startup-radar-v4"
+    prompt_version: str = "startup-radar-v5"
     min_score: float = Field(default=65.0, ge=0, le=100)
-    max_articles_per_run: int = Field(default=30, gt=0, le=200)
+    max_raw_items: int = Field(default=200, gt=0, le=1000)
+    prefilter_max_items: int = Field(default=60, gt=0, le=300)
+    triage_enabled: bool = True
+    triage_batch_size: int = Field(default=15, gt=0, le=40)
+    triage_excerpt_chars: int = Field(default=320, ge=100, le=1500)
+    triage_max_tokens: int = Field(default=2500, gt=0, le=8000)
+    triage_concurrency: int = Field(default=2, gt=0, le=10)
+    local_score_weight: float = Field(default=0.20, ge=0, le=1)
+    selection_audit: bool = True
+    max_articles_per_run: int = Field(default=20, gt=0, le=200)
+    source_quotas: Dict[str, float] = Field(
+        default_factory=lambda: {
+            "reddit": 0.30,
+            "rss": 0.30,
+            "google_news": 0.20,
+            "hackernews": 0.15,
+            "developer": 0.05,
+        }
+    )
     max_opportunities: int = Field(default=3, gt=0, le=10)
     max_signals: int = Field(default=5, ge=3, le=10)
     max_skips: int = Field(default=3, gt=0, le=10)
@@ -507,6 +525,19 @@ class StartupRadarConfig(BaseModel):
     extract_full_text: bool = True
     extractor_concurrency: int = Field(default=5, gt=0, le=20)
     min_content_chars: int = Field(default=1200, ge=0, le=20000)
+
+    @field_validator("source_quotas")
+    @classmethod
+    def validate_source_quotas(cls, quotas: Dict[str, float]) -> Dict[str, float]:
+        allowed = {"reddit", "rss", "google_news", "hackernews", "developer"}
+        unknown = set(quotas) - allowed
+        if unknown:
+            raise ValueError(f"unknown startup radar source quota: {sorted(unknown)[0]}")
+        if any(value < 0 or value > 1 for value in quotas.values()):
+            raise ValueError("startup radar source quotas must be between 0 and 1")
+        if abs(sum(quotas.values()) - 1.0) > 1e-6:
+            raise ValueError("startup radar source quotas must add up to 1.0")
+        return quotas
 
 
 class Config(BaseModel):

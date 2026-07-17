@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
@@ -9,6 +10,7 @@ import pytest
 from src.models import Config, ContentItem, SourceType
 from src.opportunity.analyzer import OpportunityAnalyzer
 from src.opportunity.history import HistoryStore
+from src.opportunity.inventory import SourceInventoryWriter
 from src.opportunity.orchestrator import StartupRadarOrchestrator
 from src.opportunity.renderer import StartupRadarRenderer
 from src.opportunity.schemas import (
@@ -19,8 +21,10 @@ from src.opportunity.schemas import (
     ScoredOpportunity,
     SkippedTrend,
     StartupProfile,
+    TriageDecision,
 )
 from src.opportunity.scorer import OpportunityScorer
+from src.opportunity.triage import OpportunityTriage
 from src.storage.manager import StorageManager
 
 
@@ -104,6 +108,31 @@ class FakeDirectionClient:
         )
 
 
+class FakeTriageClient:
+    config = None
+
+    async def complete(self, **kwargs):
+        article_ids = re.findall(r'"article_id":"([a-f0-9-]+)"', kwargs["user"])
+        return json.dumps(
+            {
+                "items": [
+                    {
+                        "article_id": article_id,
+                        "pain_signal": 8,
+                        "opportunity_relevance": 7,
+                        "novelty": 6,
+                        "evidence_quality": 8,
+                        "personal_fit": 9,
+                        "direction_key": "indie-security-review",
+                        "reason": "材料包含明确且重复出现的用户痛点。",
+                    }
+                    for article_id in article_ids
+                ]
+            },
+            ensure_ascii=False,
+        )
+
+
 def test_analyzer_returns_validated_candidate():
     item = make_item()
     analyzer = OpportunityAnalyzer(
@@ -131,6 +160,20 @@ def test_direction_aliases_merge_new_wording_into_historical_direction():
         )
     )
     assert {item.analysis.direction_key for item in candidates} == {"browser-agent"}
+
+
+def test_compact_triage_scores_every_material_in_batches():
+    articles = [(make_item(str(index)), f"abc-{index}") for index in range(5)]
+    triage = OpportunityTriage(
+        FakeTriageClient(),
+        StartupProfile(technical_strengths=["软件安全"]),
+        batch_size=2,
+        excerpt_chars=120,
+    )
+    result = asyncio.run(triage.score(articles))
+    assert len(result.decisions) == 5
+    assert result.failures == []
+    assert result.decisions["abc-0"].ai_score == 76.0
 
 
 def test_scorer_rewards_solution_gap_and_easy_mvp():
@@ -189,6 +232,20 @@ def test_history_tracks_articles_directions_and_output_cooldown(tmp_path):
         history.mark_output("indie-security-review", first_hash, run_date - timedelta(days=1))
         assert history.recently_output("indie-security-review", run_date, 7) is True
 
+        triage = TriageDecision(
+            article_id=first_hash,
+            pain_signal=8,
+            opportunity_relevance=7,
+            novelty=6,
+            evidence_quality=8,
+            personal_fit=9,
+            direction_key="indie-security-review",
+            reason="材料包含明确用户痛点。",
+        )
+        history.record_triage(first_hash, "triage-v1:profile", "fake", triage)
+        cached = history.get_triage(first_hash, "triage-v1:profile", "fake")
+        assert cached == triage
+
 
 def test_full_text_extraction_replaces_short_feed_content(tmp_path, monkeypatch):
     config = Config.model_validate(
@@ -223,6 +280,111 @@ def test_full_text_extraction_replaces_short_feed_content(tmp_path, monkeypatch)
     assert "short discussion" in item.content
 
 
+def test_source_quota_selects_exact_30_30_20_15_5_split(tmp_path):
+    config = Config.model_validate(
+        {
+            "ai": {
+                "provider": "openai",
+                "model": "fake",
+                "api_key_env": "OPENAI_API_KEY",
+            },
+            "sources": {"hackernews": {"enabled": False}},
+            "filtering": {"time_window_hours": 24},
+            "startup_radar": {"max_articles_per_run": 20},
+        }
+    )
+    orchestrator = StartupRadarOrchestrator(
+        config,
+        StorageManager(str(tmp_path / "data")),
+        profile_path=tmp_path / "profile.yml",
+    )
+    queued = []
+    source_groups = (
+        (SourceType.REDDIT, "reddit", None),
+        (SourceType.RSS, "rss", "business-consumer"),
+        (SourceType.GOOGLE_NEWS, "google_news", None),
+        (SourceType.HACKERNEWS, "hackernews", None),
+        (SourceType.OSSINSIGHT, "developer", None),
+    )
+    for source, group, category in source_groups:
+        for index in range(10):
+            item = make_item(f"{group}-{index}", source)
+            if category:
+                item.metadata["category"] = category
+            queued.append((item, f"hash-{group}-{index}"))
+
+    github_trending = make_item("github-rss", SourceType.RSS)
+    github_trending.metadata["category"] = "github-trending"
+    assert orchestrator._source_quota_group(github_trending) == "developer"
+
+    selected = orchestrator._select_by_source_quota(queued)
+    counts = {
+        group: sum(orchestrator._source_quota_group(item) == group for item, _ in selected)
+        for _, group, _ in source_groups
+    }
+    assert counts == {
+        "reddit": 6,
+        "rss": 6,
+        "google_news": 4,
+        "hackernews": 3,
+        "developer": 1,
+    }
+
+
+def test_source_quota_balances_feeds_within_rss_slice(tmp_path):
+    config = Config.model_validate(
+        {
+            "ai": {
+                "provider": "openai",
+                "model": "fake",
+                "api_key_env": "OPENAI_API_KEY",
+            },
+            "sources": {"hackernews": {"enabled": False}},
+            "filtering": {"time_window_hours": 24},
+        }
+    )
+    orchestrator = StartupRadarOrchestrator(
+        config,
+        StorageManager(str(tmp_path / "data")),
+        profile_path=tmp_path / "profile.yml",
+    )
+    queued = []
+    for feed_name in ("36氪 - 文章资讯", "Simon Willison"):
+        for index in range(10):
+            item = make_item(f"{feed_name}-{index}", SourceType.RSS)
+            item.metadata["feed_name"] = feed_name
+            queued.append((item, f"hash-{feed_name}-{index}"))
+
+    selected = orchestrator._select_by_source_quota(queued)
+    feed_counts = {
+        feed_name: sum(item.metadata.get("feed_name") == feed_name for item, _ in selected)
+        for feed_name in ("36氪 - 文章资讯", "Simon Willison")
+    }
+    assert feed_counts == {"36氪 - 文章资讯": 3, "Simon Willison": 3}
+
+
+def test_source_inventory_keeps_source_title_and_link(tmp_path):
+    reddit = make_item("reddit", SourceType.REDDIT)
+    reddit.metadata.update({"subreddit": "smallbusiness", "category": "business-pain"})
+    rss = make_item("rss", SourceType.RSS)
+    rss.metadata.update({"feed_name": "36氪 - 文章资讯", "category": "business-consumer"})
+
+    json_path, markdown_path = SourceInventoryWriter().save(
+        [reddit, rss],
+        report_date=date(2026, 7, 17),
+        output_dir=tmp_path,
+    )
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["total"] == 2
+    assert {item["source"] for item in payload["items"]} == {
+        "r/smallbusiness",
+        "36氪 - 文章资讯",
+    }
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert "| 来源 | 标题 | 链接 | 分类 |" in markdown
+    assert "https://example.com/story/reddit" in markdown
+
+
 def test_renderer_outputs_radar_sections_and_not_raw_json():
     item = make_item()
     candidate = make_candidate(item)
@@ -240,7 +402,10 @@ def test_renderer_outputs_radar_sections_and_not_raw_json():
     report = RadarReport(
         report_date=date(2026, 7, 17),
         fetched_count=20,
+        deduped_count=19,
         new_article_count=18,
+        prefiltered_count=12,
+        triaged_count=12,
         analyzed_count=18,
         signals=[
             RadarSignal(
@@ -269,4 +434,5 @@ def test_renderer_outputs_radar_sections_and_not_raw_json():
     assert "## 今日不建议追" in markdown
     assert "7 天 MVP" in markdown
     assert "软件安全与 Web 能力" in markdown
+    assert "选材漏斗" in markdown
     assert '"direction_key"' not in markdown

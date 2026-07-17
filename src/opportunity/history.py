@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 from ..models import ContentItem
-from .schemas import OpportunityCandidate
+from .schemas import OpportunityCandidate, TriageDecision
 
 
 @dataclass(frozen=True)
@@ -91,7 +91,57 @@ class HistoryStore:
 
             CREATE INDEX IF NOT EXISTS idx_opportunities_direction_date
             ON opportunities(direction_key, run_date);
+
+            CREATE TABLE IF NOT EXISTS article_triage (
+                article_hash TEXT NOT NULL,
+                triage_version TEXT NOT NULL,
+                model TEXT NOT NULL,
+                decision_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (article_hash, triage_version, model),
+                FOREIGN KEY (article_hash) REFERENCES articles(article_hash)
+            );
             """
+        )
+        self.connection.commit()
+
+    def get_triage(
+        self, article_hash: str, triage_version: str, model: str
+    ) -> TriageDecision | None:
+        row = self.connection.execute(
+            """
+            SELECT decision_json FROM article_triage
+            WHERE article_hash = ? AND triage_version = ? AND model = ?
+            """,
+            (article_hash, triage_version, model),
+        ).fetchone()
+        if row is None:
+            return None
+        return TriageDecision.model_validate_json(row["decision_json"])
+
+    def record_triage(
+        self,
+        article_hash: str,
+        triage_version: str,
+        model: str,
+        decision: TriageDecision,
+    ) -> None:
+        self.connection.execute(
+            """
+            INSERT INTO article_triage
+                (article_hash, triage_version, model, decision_json, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(article_hash, triage_version, model) DO UPDATE SET
+                decision_json = excluded.decision_json,
+                created_at = excluded.created_at
+            """,
+            (
+                article_hash,
+                triage_version,
+                model,
+                decision.model_dump_json(),
+                datetime.now(timezone.utc).isoformat(),
+            ),
         )
         self.connection.commit()
 

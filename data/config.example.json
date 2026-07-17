@@ -49,6 +49,12 @@
         "category": "ai-tools"
       },
       {
+        "name": "36氪 - 文章资讯",
+        "url": "https://36kr.com/feed-article",
+        "enabled": true,
+        "category": "business-consumer"
+      },
+      {
         "name": "LWN.net (subscriber full-text)",
         "url": "https://lwn.net/headlines/full_text?key=${LWN_KEY}",
         "enabled": false,
@@ -59,22 +65,52 @@
       "enabled": true,
       "subreddits": [
         {
-          "subreddit": "MachineLearning",
+          "subreddit": "smallbusiness",
           "enabled": true,
           "sort": "hot",
           "time_filter": "day",
-          "fetch_limit": 15,
-          "min_score": 50
-        }
-      ],
-      "users": [
+          "fetch_limit": 10,
+          "min_score": 5,
+          "category": "business-pain"
+        },
         {
-          "username": "iamthatis",
+          "subreddit": "Entrepreneur",
           "enabled": true,
-          "sort": "new",
-          "fetch_limit": 10
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 10,
+          "min_score": 5,
+          "category": "business-pain"
+        },
+        {
+          "subreddit": "digitalnomad",
+          "enabled": true,
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 10,
+          "min_score": 5,
+          "category": "travel-work"
+        },
+        {
+          "subreddit": "languagelearning",
+          "enabled": true,
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 10,
+          "min_score": 5,
+          "category": "education"
+        },
+        {
+          "subreddit": "photography",
+          "enabled": true,
+          "sort": "hot",
+          "time_filter": "day",
+          "fetch_limit": 10,
+          "min_score": 5,
+          "category": "creator-tools"
         }
       ],
+      "users": [],
       "fetch_comments": 5
     },
     "twitter": {
@@ -110,7 +146,7 @@
       "period": "past_24_hours",
       "languages": ["All", "Python", "TypeScript"],
       "keywords": [],
-      "min_stars": 10,
+      "min_stars": 5,
       "max_items": 30
     },
     "gdelt": {
@@ -124,13 +160,13 @@
       "category": "news"
     },
     "google_news": {
-      "enabled": false,
-      "query": "artificial intelligence",
-      "language": "en",
-      "country": "US",
-      "ceid": null,
-      "max_results": 100,
-      "category": "news"
+      "enabled": true,
+      "query": "消费趋势 OR 新产品 OR 小微企业 OR 创业机会",
+      "language": "zh-CN",
+      "country": "CN",
+      "ceid": "CN:zh-Hans",
+      "max_results": 30,
+      "category": "business-consumer"
     }
   },
   "filtering": {
@@ -147,9 +183,25 @@
     "database_path": "data/startup_radar.db",
     "output_dir": "data/radar",
     "docs_posts_dir": "docs/_posts",
-    "prompt_version": "startup-radar-v4",
+    "prompt_version": "startup-radar-v5",
     "min_score": 65,
-    "max_articles_per_run": 30,
+    "max_raw_items": 200,
+    "prefilter_max_items": 60,
+    "triage_enabled": true,
+    "triage_batch_size": 15,
+    "triage_excerpt_chars": 320,
+    "triage_max_tokens": 2500,
+    "triage_concurrency": 2,
+    "local_score_weight": 0.20,
+    "selection_audit": true,
+    "max_articles_per_run": 20,
+    "source_quotas": {
+      "reddit": 0.30,
+      "rss": 0.30,
+      "google_news": 0.20,
+      "hackernews": 0.15,
+      "developer": 0.05
+    },
     "max_opportunities": 3,
     "max_signals": 5,
     "max_skips": 3,

@@ -4,10 +4,36 @@ from __future__ import annotations
 
 import json
 
-from .schemas import DirectionResolution, OpportunityAnalysis, StartupProfile
+from .schemas import DirectionResolution, OpportunityAnalysis, StartupProfile, TriageResponse
 
 
-PROMPT_VERSION = "startup-radar-v4"
+PROMPT_VERSION = "startup-radar-v5"
+TRIAGE_PROMPT_VERSION = "startup-radar-triage-v1"
+
+OPPORTUNITY_TRIAGE_SYSTEM = """你是创业机会材料筛选器。你会同时看到一批标题和短摘要，而不是完整正文。
+
+目标是找出值得进一步读取全文的材料，不是直接给创业建议。
+
+评分原则：
+1. pain_signal：材料是否包含具体用户抱怨、低效流程、昂贵替代品或未满足需求。
+2. opportunity_relevance：是否可能转化为个人开发者可验证的产品机会，而非单纯新闻热度。
+3. novelty：相对常见套壳、泛 AI 热点是否提供新变化或新证据。
+4. evidence_quality：是否有明确用户、行为、讨论或可信事实，而不是空泛观点。
+5. personal_fit：严格依据给定画像判断。
+6. direction_key 使用简短、稳定、全小写英文；reason 使用一句简体中文，最多 60 字。
+7. 必须为输入中的每个 article_id 返回一项，不得添加不存在的 ID。
+8. 只输出符合 JSON Schema 的 JSON，不输出 Markdown 或额外说明。
+"""
+
+OPPORTUNITY_TRIAGE_USER = """个人画像：
+{profile}
+
+待筛选材料：
+{articles}
+
+输出 JSON Schema：
+{schema}
+"""
 
 OPPORTUNITY_ANALYSIS_SYSTEM = """你是独立开发者的创业机会研究员。
 
@@ -92,6 +118,16 @@ def build_analysis_prompt(
         engagement=engagement or "无",
         content=content or "无正文，仅根据标题和来源谨慎判断。",
         schema=json.dumps(OpportunityAnalysis.model_json_schema(), ensure_ascii=False),
+    )
+
+
+def build_triage_prompt(
+    *, profile: StartupProfile, articles: list[dict[str, object]]
+) -> str:
+    return OPPORTUNITY_TRIAGE_USER.format(
+        profile=json.dumps(profile.model_dump(mode="json"), ensure_ascii=False),
+        articles=json.dumps(articles, ensure_ascii=False, separators=(",", ":")),
+        schema=json.dumps(TriageResponse.model_json_schema(), ensure_ascii=False),
     )
 
 

@@ -20,6 +20,39 @@ class StartupProfile(BaseModel):
     constraints: dict[str, object] = Field(default_factory=dict)
 
 
+class TriageDecision(BaseModel):
+    """Compact AI judgment used before expensive full-text analysis."""
+
+    article_id: str = Field(min_length=1)
+    pain_signal: float = Field(ge=0, le=10)
+    opportunity_relevance: float = Field(ge=0, le=10)
+    novelty: float = Field(ge=0, le=10)
+    evidence_quality: float = Field(ge=0, le=10)
+    personal_fit: float = Field(ge=0, le=10)
+    direction_key: str = Field(min_length=1, max_length=120)
+    reason: str = Field(min_length=1, max_length=160)
+
+    @field_validator("direction_key")
+    @classmethod
+    def normalize_triage_direction_key(cls, value: str) -> str:
+        return "-".join(value.strip().lower().replace("_", "-").split())[:120]
+
+    @property
+    def ai_score(self) -> float:
+        weighted = (
+            self.pain_signal * 0.30
+            + self.opportunity_relevance * 0.30
+            + self.evidence_quality * 0.20
+            + self.novelty * 0.10
+            + self.personal_fit * 0.10
+        )
+        return round(weighted * 10, 2)
+
+
+class TriageResponse(BaseModel):
+    items: list[TriageDecision] = Field(default_factory=list)
+
+
 class ScoreDimensions(BaseModel):
     """Raw 0-10 judgments used by the deterministic scoring layer."""
 
@@ -146,8 +179,12 @@ class RadarReport(BaseModel):
 
     report_date: date
     fetched_count: int
+    deduped_count: int = 0
     new_article_count: int
+    prefiltered_count: int = 0
+    triaged_count: int = 0
     analyzed_count: int
+    source_counts: dict[str, int] = Field(default_factory=dict)
     signals: list[RadarSignal] = Field(default_factory=list)
     opportunities: list[ScoredOpportunity] = Field(default_factory=list)
     skipped: list[SkippedTrend] = Field(default_factory=list)

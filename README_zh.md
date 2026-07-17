@@ -320,6 +320,12 @@ docker compose run --rm horizon --hours 48   # 抓取最近 48 小时的内容
 
 生成的创业雷达保存在 `data/radar/`，历史数据保存在 `data/startup_radar.db`。
 
+创业雷达每天最多选择 20 条材料分析，来源比例为 Reddit 30%、多领域 RSS 30%、Google News 商业/消费变化 20%、Hacker News 15%、GitHub/OSS Insight 5%。普通 RSS 当前包含 36氪文章资讯和 Simon Willison；GitHub Trending 虽通过 RSS 获取，但计入 GitHub/OSS Insight 配额。详见 [Startup Radar 说明](docs/startup-radar.md)。
+
+为兼顾覆盖率和 Token 成本，系统最多保留 200 条原始候选，先用本地规则零 Token 去重和评分到约 60 条，再让 DeepSeek 批量读取短摘要初筛，最后只对 20 条提取正文并深度分析。初筛结果缓存在 SQLite，选材过程保存在 `data/radar/audit/`。
+
+每次抓取的全部 URL 去重材料还会按“来源、标题、链接、分类”保存在 `data/radar/sources/` 的 JSON 和 Markdown 清单中，用于检查信息覆盖范围和调整兴趣主题。
+
 ### 4. 自动化（可选）
 
 Startup Radar 默认通过 **GitHub Actions** 在北京时间每天 08:00 运行。查看 [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) 获取工作流配置，可自动恢复历史数据库、生成创业雷达并部署到 GitHub Pages。
