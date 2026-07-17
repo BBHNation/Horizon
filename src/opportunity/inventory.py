@@ -69,6 +69,7 @@ class SourceInventoryWriter:
         *,
         report_date: date,
         output_dir: str | Path,
+        docs_sources_dir: str | Path | None = None,
     ) -> tuple[Path, Path]:
         rows = [self._row(item) for item in items]
         rows.sort(
@@ -99,11 +100,50 @@ class SourceInventoryWriter:
             json_path,
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         )
-        _atomic_write_text(
-            markdown_path,
-            self._render_markdown(report_date, rows, group_counts, source_counts),
+        markdown = self._render_markdown(
+            report_date, rows, group_counts, source_counts
         )
+        _atomic_write_text(markdown_path, markdown)
+        if docs_sources_dir is not None:
+            self._save_docs_page(
+                markdown,
+                report_date=report_date,
+                total=len(rows),
+                docs_sources_dir=docs_sources_dir,
+            )
         return json_path, markdown_path
+
+    @staticmethod
+    def _save_docs_page(
+        markdown: str,
+        *,
+        report_date: date,
+        total: int,
+        docs_sources_dir: str | Path,
+    ) -> Path:
+        """Publish the inventory as a dated Jekyll page."""
+        docs_root = Path(docs_sources_dir)
+        docs_root.mkdir(parents=True, exist_ok=True)
+        page_path = docs_root / f"{report_date.isoformat()}.md"
+        body = markdown.split("\n", 1)[1].lstrip() if "\n" in markdown else markdown
+        front_matter = (
+            "---\n"
+            "layout: default\n"
+            f'title: "信息源清单：{report_date.isoformat()}"\n'
+            f"date: {report_date.isoformat()}\n"
+            "source_inventory: true\n"
+            f"source_total: {total}\n"
+            f"permalink: /sources/{report_date.isoformat()}/\n"
+            "---\n\n"
+        )
+        navigation = (
+            '<nav class="page-actions" aria-label="页面导航">\n'
+            '  <a href="{{ \'/\' | relative_url }}">← 返回首页</a>\n'
+            f'  <a href="{{{{ \'/radar/{report_date.isoformat()}/\' | relative_url }}}}">查看当日雷达</a>\n'
+            "</nav>\n\n"
+        )
+        _atomic_write_text(page_path, front_matter + navigation + body)
+        return page_path
 
     @staticmethod
     def _row(item: ContentItem) -> dict[str, object]:

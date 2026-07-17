@@ -373,6 +373,7 @@ def test_source_inventory_keeps_source_title_and_link(tmp_path):
         [reddit, rss],
         report_date=date(2026, 7, 17),
         output_dir=tmp_path,
+        docs_sources_dir=tmp_path / "docs" / "sources",
     )
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     assert payload["total"] == 2
@@ -383,6 +384,13 @@ def test_source_inventory_keeps_source_title_and_link(tmp_path):
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "| 来源 | 标题 | 链接 | 分类 |" in markdown
     assert "https://example.com/story/reddit" in markdown
+    page = (tmp_path / "docs" / "sources" / "2026-07-17.md").read_text(
+        encoding="utf-8"
+    )
+    assert "source_inventory: true" in page
+    assert "source_total: 2" in page
+    assert "permalink: /sources/2026-07-17/" in page
+    assert "查看当日雷达" in page
 
 
 def test_renderer_outputs_radar_sections_and_not_raw_json():
@@ -436,3 +444,26 @@ def test_renderer_outputs_radar_sections_and_not_raw_json():
     assert "软件安全与 Web 能力" in markdown
     assert "选材漏斗" in markdown
     assert '"direction_key"' not in markdown
+
+
+def test_renderer_docs_post_links_to_source_inventory(tmp_path):
+    report = RadarReport(
+        report_date=date(2026, 7, 17),
+        fetched_count=0,
+        deduped_count=0,
+        new_article_count=0,
+        prefiltered_count=0,
+        triaged_count=0,
+        analyzed_count=0,
+        prompt_version="v1",
+        model="fake",
+    )
+    _, post_path = StartupRadarRenderer().save(
+        report,
+        output_dir=tmp_path / "radar",
+        docs_posts_dir=tmp_path / "docs" / "_posts",
+    )
+    post = post_path.read_text(encoding="utf-8")
+    assert "查看完整信息源" in post
+    assert "/sources/2026-07-17/" in post
+    assert "permalink: /radar/2026-07-17/" in post

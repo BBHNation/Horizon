@@ -345,6 +345,9 @@ class StartupRadarOrchestrator:
                 deduped,
                 report_date=report_date,
                 output_dir=self.settings.output_dir,
+                docs_sources_dir=(
+                    Path(self.settings.docs_posts_dir).parent / "sources"
+                ),
             )
             self.console.print(f"🗂️  Source inventory: {inventory_markdown}")
             self.console.print(f"   JSON: {inventory_json}\n")

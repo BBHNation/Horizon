@@ -196,8 +196,15 @@ class StartupRadarRenderer:
             f"date: {report.report_date.isoformat()}\n"
             "lang: zh\n"
             "category: startup-radar\n"
+            f"permalink: /radar/{report.report_date.isoformat()}/\n"
             "---\n\n"
         )
         body = markdown.split("\n", 1)[1].lstrip() if "\n" in markdown else markdown
-        _atomic_write_text(post_path, front_matter + body)
+        navigation = (
+            '<nav class="page-actions" aria-label="页面导航">\n'
+            '  <a href="{{ \'/\' | relative_url }}">← 返回首页</a>\n'
+            f'  <a href="{{{{ \'/sources/{report.report_date.isoformat()}/\' | relative_url }}}}">查看完整信息源</a>\n'
+            "</nav>\n\n"
+        )
+        _atomic_write_text(post_path, front_matter + navigation + body)
         return output_path, post_path
