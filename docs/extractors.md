@@ -47,10 +47,10 @@ Using a type name directly (e.g. `"content_extractor": "trafilatura"`) also work
 
 **File**: `src/extractors/trafilatura.py`
 
-Uses the [trafilatura](https://trafilatura.readthedocs.io/) library to extract main article text from HTML. Requires the `trafilatura` optional dependency:
+Uses the [trafilatura](https://trafilatura.readthedocs.io/) library to extract main article text from HTML. It is installed by default because Startup Radar uses it before opportunity analysis:
 
 ```bash
-uv sync --extra trafilatura
+uv sync
 ```
 
 **Config fields**:

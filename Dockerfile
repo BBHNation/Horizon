@@ -8,7 +8,7 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy project files
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md profile.yml ./
 COPY src ./src
 COPY data ./data
 COPY .env.example .env.example
@@ -28,5 +28,5 @@ ENV PYTHONUNBUFFERED=1
 USER horizon
 
 # Run the application
-ENTRYPOINT ["uv", "run", "horizon"]
+ENTRYPOINT ["uv", "run", "startup-radar"]
 CMD []

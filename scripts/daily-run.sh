@@ -11,7 +11,7 @@ LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 
 cd "$PROJECT_DIR"
 
-echo "$LOG_PREFIX Starting Horizon daily run..."
+echo "$LOG_PREFIX Starting Startup Radar daily run..."
 
 # 1. Pull latest code
 git pull --quiet origin main
@@ -19,8 +19,8 @@ git pull --quiet origin main
 # 2. Install/update dependencies
 uv sync --quiet
 
-# 3. Run Horizon
-uv run horizon --hours 24
+# 3. Run Startup Radar
+uv run startup-radar --hours 24
 
 # 4. Deploy docs to gh-pages
 echo "$LOG_PREFIX Deploying to gh-pages..."

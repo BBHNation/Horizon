@@ -32,6 +32,9 @@
 
 </div>
 
+> [!IMPORTANT]
+> 本 fork 正在二次开发为 **Startup Radar（创业雷达）**：保留 Horizon 的采集基础设施，将输出从新闻摘要改为面向独立开发者的创业机会发现。第一阶段的架构、配置和运行方式见 [Startup Radar 文档](docs/startup-radar.md)。
+
 ## 截图
 
 <table>
@@ -304,8 +307,8 @@ cp data/config.example.json data/config.json  # 自定义信息源
 #### 本地安装
 
 ```bash
-uv run horizon              # 使用默认 24 小时窗口
-uv run horizon --hours 48   # 抓取最近 48 小时的内容
+uv run startup-radar              # 使用默认 24 小时窗口
+uv run startup-radar --hours 48   # 抓取最近 48 小时的内容
 ```
 
 #### 使用 Docker
@@ -315,11 +318,11 @@ docker compose run --rm horizon              # 使用默认 24 小时窗口
 docker compose run --rm horizon --hours 48   # 抓取最近 48 小时的内容
 ```
 
-生成的日报将保存在 `data/summaries/` 目录中。
+生成的创业雷达保存在 `data/radar/`，历史数据保存在 `data/startup_radar.db`。
 
 ### 4. 自动化（可选）
 
-Horizon 非常适合作为 **GitHub Actions** 定时任务运行。查看 [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) 获取现成的工作流配置，可自动生成日报并部署到 GitHub Pages。
+Startup Radar 默认通过 **GitHub Actions** 在北京时间每天 08:00 运行。查看 [`.github/workflows/daily-summary.yml`](.github/workflows/daily-summary.yml) 获取工作流配置，可自动恢复历史数据库、生成创业雷达并部署到 GitHub Pages。
 
 ## 支持的信息源
 

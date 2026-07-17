@@ -8,7 +8,8 @@
     "max_tokens": 4096,
     "throttle_sec": 0,
     "analysis_concurrency": 1,
-    "enrichment_concurrency": 1
+    "enrichment_concurrency": 1,
+    "languages": ["zh"]
   },
   "email": {
     "enabled": false,
@@ -85,6 +86,10 @@
       "max_tweets_to_expand": 10,
       "reply_min_likes": 5
     },
+    "telegram": {
+      "enabled": false,
+      "channels": []
+    },
     "openbb": {
       "enabled": false,
       "fetch_filings": false,
@@ -101,7 +106,7 @@
       ]
     },
     "ossinsight": {
-      "enabled": false,
+      "enabled": true,
       "period": "past_24_hours",
       "languages": ["All", "Python", "TypeScript"],
       "keywords": [],
@@ -135,6 +140,23 @@
     "category_groups": {},
     "default_group": "other",
     "default_group_limit": null
+  },
+  "startup_radar": {
+    "enabled": true,
+    "profile_path": "profile.yml",
+    "database_path": "data/startup_radar.db",
+    "output_dir": "data/radar",
+    "docs_posts_dir": "docs/_posts",
+    "prompt_version": "startup-radar-v4",
+    "min_score": 65,
+    "max_articles_per_run": 30,
+    "max_opportunities": 3,
+    "max_signals": 5,
+    "max_skips": 3,
+    "opportunity_cooldown_days": 7,
+    "extract_full_text": true,
+    "extractor_concurrency": 5,
+    "min_content_chars": 1200
   },
   "webhook": {
     "enabled": false,

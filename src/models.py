@@ -489,6 +489,26 @@ class FilteringConfig(BaseModel):
     default_group_limit: Optional[int] = Field(default=None, gt=0)
 
 
+class StartupRadarConfig(BaseModel):
+    """Settings for the opportunity-discovery pipeline."""
+
+    enabled: bool = True
+    profile_path: str = "profile.yml"
+    database_path: str = "data/startup_radar.db"
+    output_dir: str = "data/radar"
+    docs_posts_dir: str = "docs/_posts"
+    prompt_version: str = "startup-radar-v4"
+    min_score: float = Field(default=65.0, ge=0, le=100)
+    max_articles_per_run: int = Field(default=30, gt=0, le=200)
+    max_opportunities: int = Field(default=3, gt=0, le=10)
+    max_signals: int = Field(default=5, ge=3, le=10)
+    max_skips: int = Field(default=3, gt=0, le=10)
+    opportunity_cooldown_days: int = Field(default=7, ge=0, le=90)
+    extract_full_text: bool = True
+    extractor_concurrency: int = Field(default=5, gt=0, le=20)
+    min_content_chars: int = Field(default=1200, ge=0, le=20000)
+
+
 class Config(BaseModel):
     """Main configuration model."""
 
@@ -499,3 +519,4 @@ class Config(BaseModel):
     extractors: Dict[str, ExtractorConfig] = Field(default_factory=dict)
     email: Optional[EmailConfig] = None
     webhook: Optional[WebhookConfig] = None
+    startup_radar: StartupRadarConfig = Field(default_factory=StartupRadarConfig)

@@ -40,6 +40,10 @@ ENV/
 data/config.json
 data/seen.json
 data/summaries/
+data/radar/
+data/*.db
+data/*.db-shm
+data/*.db-wal
 data/subscribers.json
 data/mcp.secrets.json
 data/mcp-secrets.json

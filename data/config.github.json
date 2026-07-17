@@ -2,15 +2,14 @@
   "version": "1.0",
   "ai": {
     "provider": "deepseek",
-    "model": "deepseek-v4-flash",
+    "model": "deepseek-chat",
     "base_url": "https://api.deepseek.com",
     "api_key_env": "DEEPSEEK_API_KEY",
     "temperature": 0.3,
-    "max_tokens": 8192,
-    "throttle_sec": 1,
+    "max_tokens": 4096,
+    "throttle_sec": 0,
     "languages": [
-      "zh",
-      "en"
+      "zh"
     ],
     "analysis_concurrency": 5,
     "enrichment_concurrency": 5
@@ -68,7 +67,7 @@
       {
         "name": "LWN.net",
         "url": "https://lwn.net/headlines/full_text?key=${LWN_KEY}",
-        "enabled": true,
+        "enabled": false,
         "category": "linux-kernel"
       }
     ],
@@ -96,22 +95,50 @@
       "fetch_comments": 10
     },
     "telegram": {
+      "enabled": false,
+      "channels": []
+    },
+    "twitter": {
+      "enabled": false,
+      "users": []
+    },
+    "openbb": {
+      "enabled": false,
+      "watchlists": []
+    },
+    "ossinsight": {
       "enabled": true,
-      "channels": [
-        {
-          "channel": "zaihuapd",
-          "enabled": true,
-          "fetch_limit": 20
-        }
-      ]
+      "period": "past_24_hours",
+      "languages": ["All", "Python", "TypeScript", "Swift"],
+      "keywords": [],
+      "min_stars": 20,
+      "max_items": 15,
+      "category": "github-trending"
     }
   },
   "filtering": {
     "ai_score_threshold": 8.0,
     "time_window_hours": 24
   },
-  "webhook": {
+  "startup_radar": {
     "enabled": true,
+    "profile_path": "profile.yml",
+    "database_path": "data/startup_radar.db",
+    "output_dir": "data/radar",
+    "docs_posts_dir": "docs/_posts",
+    "prompt_version": "startup-radar-v4",
+    "min_score": 65,
+    "max_articles_per_run": 30,
+    "max_opportunities": 3,
+    "max_signals": 5,
+    "max_skips": 3,
+    "opportunity_cooldown_days": 7,
+    "extract_full_text": true,
+    "extractor_concurrency": 5,
+    "min_content_chars": 1200
+  },
+  "webhook": {
+    "enabled": false,
     "url_env": "HORIZON_WEBHOOK_URL",
     "delivery": "summary_and_items",
     "overview_position": "last",

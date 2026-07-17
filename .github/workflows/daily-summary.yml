@@ -1,10 +1,9 @@
-name: Daily Horizon Summary
+name: Daily Startup Radar
 
 on:
   schedule:
-    # GitHub scheduled workflows use UTC. 20:00 UTC is 04:00 Asia/Shanghai;
-    # this intentionally runs early to offset the observed schedule delay.
-    - cron: '0 22 * * *'
+    # GitHub scheduled workflows use UTC. 00:00 UTC is 08:00 Asia/Shanghai.
+    - cron: '0 0 * * *'
   workflow_dispatch:      # Allow manual trigger
 
 jobs:
@@ -31,7 +30,15 @@ jobs:
       - name: Prepare GitHub Actions config
         run: cp data/config.github.json data/config.json
 
-      - name: Run Horizon
+      - name: Restore Startup Radar history
+        uses: actions/cache/restore@v4
+        with:
+          path: data/startup_radar.db
+          key: startup-radar-db-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            startup-radar-db-
+
+      - name: Run Startup Radar
         env:
           # Map secrets to environment variables expected by config.json
           # Modify these based on your data/config.github.json provider settings
@@ -41,7 +48,14 @@ jobs:
           LWN_KEY: ${{ secrets.LWN_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           HORIZON_WEBHOOK_URL: ${{ secrets.HORIZON_WEBHOOK_URL }}
-        run: uv run horizon --hours 24
+        run: uv run startup-radar --hours 24
+
+      - name: Save Startup Radar history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/startup_radar.db
+          key: startup-radar-db-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Set current date as environment variable
         run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
@@ -52,6 +66,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
           keep_files: true  # Keep existing summaries on gh-pages branch
-          commit_message: "📝 Daily Summary: ${{ env.DATE }}"
+          commit_message: "🚀 Startup Radar: ${{ env.DATE }}"
           publish_branch: gh-pages
           enable_jekyll: true
