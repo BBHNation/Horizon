@@ -205,6 +205,28 @@ class TestOpenAIClientComplete:
         call_kwargs = mock_create.call_args[1]
         assert call_kwargs.get("response_format") == {"type": "json_object"}
 
+    def test_deepseek_request_uses_v4_flash(self, monkeypatch):
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+        client = OpenAIClient(_make_config(
+            provider=AIProvider.DEEPSEEK,
+            model=AI_PROVIDER_DEFAULTS[AIProvider.DEEPSEEK]["model"],
+            api_key_env="DEEPSEEK_API_KEY",
+        ))
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = '{"score": 8}'
+        mock_response.usage.prompt_tokens = 10
+        mock_response.usage.completion_tokens = 5
+
+        with patch.object(
+            client.client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+            asyncio.run(client.complete(system="test", user="hello"))
+
+        assert mock_create.call_args[1]["model"] == "deepseek-v4-flash"
+
 
 class TestTemperatureFallback:
     """Retry-without-temperature path for models that deprecated temperature.
@@ -326,6 +348,11 @@ class TestFactoryFunction:
         defaults = AI_PROVIDER_DEFAULTS[AIProvider.MINIMAX]
         assert defaults["model"] == "MiniMax-M3"
         assert defaults["base_url"] == "https://api.minimax.io/v1"
+
+    def test_deepseek_provider_defaults_to_v4_flash(self):
+        defaults = AI_PROVIDER_DEFAULTS[AIProvider.DEEPSEEK]
+        assert defaults["model"] == "deepseek-v4-flash"
+        assert defaults["base_url"] == "https://api.deepseek.com"
 
     def test_creates_openai_client_for_minimax(self, monkeypatch):
         monkeypatch.setenv("MINIMAX_API_KEY", "test-key")

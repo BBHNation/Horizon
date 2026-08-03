@@ -93,6 +93,23 @@ Common API key variable names:
 
 Set `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` in your `.env`. The `model` field should be your Azure deployment name, not just the base model family name.
 
+**DeepSeek**:
+
+The built-in provider uses the official V4 Flash model and OpenAI-compatible
+endpoint:
+
+```json
+{
+  "ai": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "base_url": "https://api.deepseek.com",
+    "throttle_sec": 0
+  }
+}
+```
+
 **MiniMax**:
 
 The built-in provider defaults to `MiniMax-M3` and the global
