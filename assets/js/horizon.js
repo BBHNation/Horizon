@@ -238,6 +238,120 @@
     enhanceSkipped(main);
   }
 
+  function enhanceNewsReport() {
+    var main = document.querySelector('.main-content');
+    var data = main && main.querySelector(':scope > .news-overview-data');
+    if (!main || !data) return;
+    main.classList.add('news-report');
+
+    var dashboard = document.createElement('section');
+    dashboard.className = 'news-dashboard';
+    dashboard.setAttribute('aria-label', '今日新闻概述');
+    dashboard.innerHTML =
+      '<div class="news-dashboard__heading">' +
+        '<p class="radar-kicker">TODAY IN CONTEXT</p>' +
+        '<h2>先看全局，再展开事件</h2>' +
+      '</div>' +
+      '<div class="news-metrics">' +
+        '<div><strong>' + data.dataset.fetched + '</strong><span>抓取材料</span></div>' +
+        '<div><strong>' + data.dataset.selected + '</strong><span>平衡选材</span></div>' +
+        '<div><strong>' + data.dataset.publishers + '</strong><span>独立发布者</span></div>' +
+        '<div class="is-accent"><strong>' + data.dataset.corroborated + '/' +
+          data.dataset.events + '</strong><span>多源印证 / 总事件</span></div>' +
+      '</div>';
+    var narrative = document.createElement('div');
+    narrative.className = 'news-dashboard__narrative';
+    Array.from(data.children).forEach(function (child) {
+      narrative.appendChild(child);
+    });
+    dashboard.appendChild(narrative);
+    data.replaceWith(dashboard);
+
+    var events = Array.from(main.querySelectorAll('.news-event'));
+    if (!events.length) return;
+    var categories = Array.from(new Set(events.map(function (event) {
+      return event.dataset.category;
+    })));
+    var controls = document.createElement('div');
+    controls.className = 'news-controls';
+    controls.setAttribute('aria-label', '筛选新闻领域');
+    var corroboratedCount = events.filter(function (event) {
+      return event.dataset.evidence === 'corroborated';
+    }).length;
+    var primaryCount = events.filter(function (event) {
+      return event.dataset.evidence === 'primary';
+    }).length;
+    var singleCount = events.filter(function (event) {
+      return event.dataset.evidence === 'single_source';
+    }).length;
+    controls.innerHTML = '<button type="button" class="is-active" data-filter="all">全部 <span>' +
+      events.length + '</span></button>' +
+      '<button type="button" data-evidence-filter="corroborated">多源印证 <span>' +
+        corroboratedCount + '</span></button>' +
+      '<button type="button" data-evidence-filter="primary">官方/一手 <span>' +
+        primaryCount + '</span></button>' +
+      '<button type="button" data-evidence-filter="single_source">单源观察 <span>' +
+        singleCount + '</span></button>' + categories.map(function (category) {
+        var count = events.filter(function (event) {
+          return event.dataset.category === category;
+        }).length;
+        return '<button type="button" data-filter="' + category + '">' + category +
+          ' <span>' + count + '</span></button>';
+      }).join('');
+
+    var eventHeading = directHeading(main, '今日事件');
+    if (eventHeading) eventHeading.insertAdjacentElement('afterend', controls);
+    controls.addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-filter], button[data-evidence-filter]');
+      if (!button) return;
+      controls.querySelectorAll('button').forEach(function (item) {
+        item.classList.toggle('is-active', item === button);
+      });
+      events.forEach(function (card) {
+        if (button.dataset.evidenceFilter) {
+          card.hidden = card.dataset.evidence !== button.dataset.evidenceFilter;
+        } else {
+          card.hidden = button.dataset.filter !== 'all' &&
+            card.dataset.category !== button.dataset.filter;
+        }
+      });
+    });
+
+    events.forEach(function (card, index) {
+      var heading = card.querySelector('h3');
+      var detail = card.querySelector('.news-event__detail');
+      var source = card.querySelector('.news-event__sources');
+      if (heading) {
+        heading.setAttribute('tabindex', '0');
+        heading.setAttribute('role', 'button');
+        heading.setAttribute('aria-controls', 'event-detail-' + (index + 1));
+      }
+      if (detail) detail.id = 'event-detail-' + (index + 1);
+      function toggleDetail() {
+        if (!detail) return;
+        detail.open = !detail.open;
+        if (detail.open) detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      if (heading) {
+        heading.addEventListener('click', toggleDetail);
+        heading.addEventListener('keydown', function (keyboardEvent) {
+          if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+            keyboardEvent.preventDefault();
+            toggleDetail();
+          }
+        });
+      }
+      [detail, source].forEach(function (disclosure) {
+        if (!disclosure) return;
+        disclosure.addEventListener('toggle', function () {
+          card.classList.toggle('is-expanded', Boolean(
+            (detail && detail.open) || (source && source.open)
+          ));
+        });
+      });
+    });
+  }
+
   /** Add semantic classes without changing the report Markdown. */
   function markSemanticElements() {
     document.querySelectorAll('.main-content p').forEach(function (paragraph) {
@@ -254,6 +368,7 @@
     processScoreBadges();
     processRadarScores();
     markSemanticElements();
+    enhanceNewsReport();
     enhanceRadarReport();
   });
 })();

@@ -1,19 +1,23 @@
 ---
 layout: default
-title: 今日创业雷达
+title: Horizon 综合决策雷达
 ---
 
-# Startup Radar
+# Horizon 综合决策雷达
 
 <div class="home-hero">
-  <p class="eyebrow">DAILY OPPORTUNITY BRIEFING</p>
-  <p class="lead">每天从新闻、产品和社区讨论中，发现适合独立开发者验证的创业机会。</p>
+  <p class="eyebrow">NEWS · CONTEXT · OPPORTUNITY</p>
+  <p class="lead">先用多源新闻看清宏观、政策、产业与社会变化，再判断哪些创业方向真正值得验证。</p>
 </div>
 
 <div class="quick-links">
-  <a href="#今日创业雷达">
-    <strong>阅读创业雷达</strong>
-    <span>机会、证据与 7 天 MVP</span>
+  <a href="#今日综合新闻">
+    <strong>阅读综合新闻</strong>
+    <span>概述、影响、来源与完整分析</span>
+  </a>
+  <a href="#今日创业机会">
+    <strong>查看创业机会</strong>
+    <span>从变化中提炼机会与 7 天 MVP</span>
   </a>
   <a href="{{ '/sources/' | relative_url }}">
     <strong>查看信息源清单</strong>
@@ -21,13 +25,28 @@ title: 今日创业雷达
   </a>
 </div>
 
-每份报告聚焦三个问题：
+平台分两步回答问题：
 
-- 今天出现了哪些值得创业者关注的变化？
-- 哪些机会适合个人或小团队在 7–14 天内验证？
-- 哪些热门方向不值得投入？
+- 综合新闻先归纳今天发生了什么、为什么重要、不同来源如何解释；
+- 创业雷达再判断哪些变化值得个人或小团队在 7–14 天内验证。
 
-## 今日创业雷达
+## 今日综合新闻
+
+<ul class="report-list">
+  {% assign news_posts = site.posts | where: "category", "news-digest" %}
+  {% for post in news_posts limit:30 %}
+    <li>
+      <a href="{{ post.url | relative_url }}">
+        <span class="report-date">{{ post.date | date: "%Y-%m-%d" }}</span>
+        <span class="report-meta">概述、多源证据与影响分析 →</span>
+      </a>
+    </li>
+  {% else %}
+    <li class="empty-state">尚未生成综合新闻报告。</li>
+  {% endfor %}
+</ul>
+
+## 今日创业机会
 
 <ul class="report-list">
   {% assign radar_posts = site.posts | where: "category", "startup-radar" %}
@@ -35,7 +54,7 @@ title: 今日创业雷达
     <li>
       <a href="{{ post.url | relative_url }}">
         <span class="report-date">{{ post.date | date: "%Y-%m-%d" }}</span>
-        <span class="report-meta">查看当日机会与证据 →</span>
+        <span class="report-meta">查看机会、证据与验证路径 →</span>
       </a>
     </li>
   {% else %}
@@ -45,6 +64,7 @@ title: 今日创业雷达
 
 ## 文档
 
+- [综合新闻报告与证据分层](news-digest)
 - [每日信息源清单](sources/)
 - [Startup Radar 架构与运行方式](startup-radar)
 - [Horizon 信息源采集器](scrapers)
