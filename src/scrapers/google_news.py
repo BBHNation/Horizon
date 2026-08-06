@@ -38,7 +38,7 @@ import feedparser
 import httpx
 
 from .base import BaseScraper
-from ..models import ContentItem, GoogleNewsConfig, SourceType
+from ..models import ContentItem, GoogleNewsConfig, GoogleNewsQueryConfig, SourceType
 
 logger = logging.getLogger(__name__)
 
@@ -72,17 +72,39 @@ class GoogleNewsScraper(BaseScraper):
         if not self.gn_config.enabled:
             return []
 
-        base_query = (self.gn_config.query or "").strip()
+        queries = [query for query in self.gn_config.queries if query.enabled]
+        if not queries:
+            queries = [
+                GoogleNewsQueryConfig(
+                    name="Google News",
+                    query=self.gn_config.query,
+                    max_results=self.gn_config.max_results,
+                    category=self.gn_config.category,
+                )
+            ]
+
+        items: List[ContentItem] = []
+        for query_config in queries:
+            items.extend(await self._fetch_query(query_config, since))
+        return items
+
+    async def _fetch_query(
+        self, query_config: GoogleNewsQueryConfig, since: datetime
+    ) -> List[ContentItem]:
+        """Fetch and label one configured discovery query."""
+        base_query = (query_config.query or "").strip()
         if not base_query:
             return []
 
         query = f"{base_query} {self._time_operator(since)}"
 
-        ceid = self.gn_config.ceid or f"{self.gn_config.country}:{self.gn_config.language}"
+        language = query_config.language or self.gn_config.language
+        country = query_config.country or self.gn_config.country
+        ceid = query_config.ceid or self.gn_config.ceid or f"{country}:{language}"
         params: dict[str, Any] = {
             "q": query,
-            "hl": self.gn_config.language,
-            "gl": self.gn_config.country,
+            "hl": language,
+            "gl": country,
             "ceid": ceid,
         }
 
@@ -95,10 +117,11 @@ class GoogleNewsScraper(BaseScraper):
             feed = feedparser.parse(response.text)
 
             items: List[ContentItem] = []
+            limit = query_config.max_results or self.gn_config.max_results
             for entry in feed.entries:
-                if len(items) >= self.gn_config.max_results:
+                if len(items) >= limit:
                     break
-                item = self._entry_to_item(entry)
+                item = self._entry_to_item(entry, query_config)
                 if item is not None:
                     items.append(item)
             return items
@@ -126,7 +149,11 @@ class GoogleNewsScraper(BaseScraper):
             return f"when:{hours}h"
         return f"after:{since_utc.strftime('%Y-%m-%d')}"
 
-    def _entry_to_item(self, entry: Any) -> Optional[ContentItem]:
+    def _entry_to_item(
+        self,
+        entry: Any,
+        query_config: Optional[GoogleNewsQueryConfig] = None,
+    ) -> Optional[ContentItem]:
         """Map one Google News RSS entry into a ContentItem.
 
         Returns None when the entry has no title/link or an unparseable
@@ -147,14 +174,28 @@ class GoogleNewsScraper(BaseScraper):
                 return None
 
             source_name = self._extract_source_name(entry)
+            if query_config and query_config.publisher_allowlist:
+                normalized_source = (source_name or "").casefold()
+                if not any(
+                    allowed.casefold() in normalized_source
+                    for allowed in query_config.publisher_allowlist
+                ):
+                    return None
 
             entry_id = entry.get("id") or link
             entry_hash = hashlib.sha256(str(entry_id).encode("utf-8")).hexdigest()[:16]
 
             meta = {
-                "gn_query": self.gn_config.query,
+                "gn_query": query_config.query if query_config else self.gn_config.query,
+                "query_name": query_config.name if query_config else "Google News",
                 "source_name": source_name,
-                "category": self.gn_config.category,
+                "category": (
+                    query_config.category
+                    if query_config and query_config.category
+                    else self.gn_config.category
+                ),
+                "source_tier": query_config.source_tier if query_config else None,
+                "preferred": query_config.preferred if query_config else False,
             }
 
             return ContentItem(

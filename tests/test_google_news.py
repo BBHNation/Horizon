@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 
-from src.models import GoogleNewsConfig
+from src.models import GoogleNewsConfig, GoogleNewsQueryConfig
 from src.scrapers.google_news import GoogleNewsScraper
 
 
@@ -178,3 +178,60 @@ def test_max_results_cap() -> None:
     items = asyncio.run(scraper.fetch(_now() - timedelta(days=365)))
 
     assert len(items) == 2
+
+
+def test_multiple_queries_have_independent_locales_and_metadata() -> None:
+    client = _mock_client(_feed(_item("Headline - BBC", "https://example.com/a", source="BBC")))
+    config = GoogleNewsConfig(
+        enabled=True,
+        query="legacy",
+        queries=[
+            GoogleNewsQueryConfig(
+                name="中文官方",
+                query="site:news.cn 经济",
+                category="macro-policy",
+                source_tier="official",
+                preferred=True,
+            ),
+            GoogleNewsQueryConfig(
+                name="Global",
+                query="site:bbc.com economy",
+                language="en-US",
+                country="US",
+                ceid="US:en",
+                category="macro-global",
+            ),
+        ],
+    )
+    scraper = GoogleNewsScraper(config, client)
+
+    items = asyncio.run(scraper.fetch(_now() - timedelta(days=365)))
+
+    assert client.get.call_count == 2
+    assert client.get.call_args_list[1].kwargs["params"]["hl"] == "en-US"
+    assert items[0].metadata["query_name"] == "中文官方"
+    assert items[0].metadata["source_tier"] == "official"
+    assert items[0].metadata["preferred"] is True
+    assert items[1].metadata["query_name"] == "Global"
+
+
+def test_publisher_allowlist_filters_unexpected_sources() -> None:
+    xml = _feed(
+        _item("Allowed", "https://example.com/a", source="BBC News")
+        + _item("Rejected", "https://example.com/b", source="Unknown Blog")
+    )
+    client = _mock_client(xml)
+    config = GoogleNewsConfig(
+        enabled=True,
+        queries=[
+            GoogleNewsQueryConfig(
+                name="BBC",
+                query="site:bbc.com",
+                publisher_allowlist=["BBC"],
+            )
+        ],
+    )
+
+    items = asyncio.run(GoogleNewsScraper(config, client).fetch(_now() - timedelta(days=365)))
+
+    assert [value.metadata["source_name"] for value in items] == ["BBC News"]

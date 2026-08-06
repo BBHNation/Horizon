@@ -12,7 +12,8 @@
       "zh"
     ],
     "analysis_concurrency": 5,
-    "enrichment_concurrency": 5
+    "enrichment_concurrency": 5,
+    "thinking_enabled": false
   },
   "sources": {
     "github": [
@@ -69,6 +70,30 @@
         "url": "https://newsletter.semianalysis.com/feed",
         "enabled": true,
         "category": "semiconductors"
+      },
+      {
+        "name": "BBC World",
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "enabled": true,
+        "category": "macro-global",
+        "source_tier": "professional",
+        "preferred": true
+      },
+      {
+        "name": "BBC Business",
+        "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+        "enabled": true,
+        "category": "macro-economy",
+        "source_tier": "professional",
+        "preferred": true
+      },
+      {
+        "name": "BBC Technology",
+        "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+        "enabled": true,
+        "category": "technology",
+        "source_tier": "professional",
+        "preferred": true
       },
       {
         "name": "LWN.net",
@@ -157,7 +182,65 @@
       "country": "CN",
       "ceid": "CN:zh-Hans",
       "max_results": 30,
-      "category": "business-consumer"
+      "category": "business-consumer",
+      "queries": [
+        {
+          "name": "中国官方数据与政策",
+          "query": "(site:gov.cn OR site:stats.gov.cn OR site:pbc.gov.cn OR site:miit.gov.cn OR site:customs.gov.cn) (经济 OR 政策 OR 数据 OR 监管)",
+          "max_results": 18,
+          "category": "macro-policy",
+          "source_tier": "official"
+        },
+        {
+          "name": "新华社",
+          "query": "(site:news.cn OR site:xinhuanet.com) (中国 OR 国际 OR 经济 OR 科技 OR 社会)",
+          "max_results": 16,
+          "category": "macro-policy",
+          "source_tier": "official",
+          "preferred": true,
+          "publisher_allowlist": ["新华", "Xinhua"]
+        },
+        {
+          "name": "澎湃与联合早报",
+          "query": "(site:thepaper.cn OR site:zaobao.com.sg) (中国 OR 国际 OR 经济 OR 政策 OR 科技 OR 社会)",
+          "max_results": 24,
+          "category": "policy-society",
+          "source_tier": "professional",
+          "preferred": true,
+          "publisher_allowlist": ["澎湃", "联合早报", "Zaobao"]
+        },
+        {
+          "name": "BBC 与 CNN",
+          "query": "(site:bbc.com/news OR site:cnn.com) (China OR economy OR business OR technology OR policy)",
+          "language": "en-US",
+          "country": "US",
+          "ceid": "US:en",
+          "max_results": 20,
+          "category": "macro-global",
+          "source_tier": "professional",
+          "preferred": true,
+          "publisher_allowlist": ["BBC", "CNN"]
+        },
+        {
+          "name": "朝日新闻",
+          "query": "site:asahi.com (日本 OR 中国 OR 経済 OR 政治 OR 技術)",
+          "language": "ja",
+          "country": "JP",
+          "ceid": "JP:ja",
+          "max_results": 12,
+          "category": "macro-global",
+          "source_tier": "professional",
+          "preferred": true,
+          "publisher_allowlist": ["朝日", "Asahi"]
+        },
+        {
+          "name": "商业消费与创业变化",
+          "query": "消费趋势 OR 新产品 OR 小微企业 OR 创业机会",
+          "max_results": 20,
+          "category": "business-consumer",
+          "source_tier": "professional"
+        }
+      ]
     }
   },
   "filtering": {
@@ -183,10 +266,10 @@
     "selection_audit": true,
     "max_articles_per_run": 20,
     "source_quotas": {
-      "reddit": 0.30,
-      "rss": 0.30,
-      "google_news": 0.20,
-      "hackernews": 0.15,
+      "reddit": 0.05,
+      "rss": 0.40,
+      "google_news": 0.40,
+      "hackernews": 0.10,
       "developer": 0.05
     },
     "max_opportunities": 3,
@@ -196,6 +279,20 @@
     "extract_full_text": true,
     "extractor_concurrency": 5,
     "min_content_chars": 1200
+  },
+  "news_digest": {
+    "enabled": true,
+    "output_dir": "data/news",
+    "docs_posts_dir": "docs/_posts",
+    "prompt_version": "news-digest-v1",
+    "max_input_items": 40,
+    "max_events": 6,
+    "max_items_per_publisher": 6,
+    "community_max_ratio": 0.05,
+    "excerpt_chars": 320,
+    "max_output_tokens": 8000,
+    "categories": ["宏观经济", "政策监管", "产业公司", "科技产品", "消费社会"],
+    "preferred_publishers": ["新华社", "新华网", "澎湃新闻", "联合早报", "BBC", "CNN", "朝日新闻", "朝日新聞"]
   },
   "webhook": {
     "enabled": false,

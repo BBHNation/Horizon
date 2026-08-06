@@ -213,6 +213,7 @@ class OpenAIClient(AIClient):
         self.temperature = config.temperature
         self.max_tokens = config.max_tokens
         self.provider = config.provider.value
+        self.thinking_enabled = config.thinking_enabled
         # Some newer models (e.g. Claude Opus 4.7 on Bedrock Converse) reject
         # `temperature`. We learn this on first 400 and stop sending it.
         self._supports_temperature = True
@@ -323,6 +324,12 @@ class OpenAIClient(AIClient):
         request_kwargs[token_param] = max_tokens
         if include_temperature:
             request_kwargs["temperature"] = temperature
+        if self.provider == "deepseek" and self.thinking_enabled is not None:
+            request_kwargs["extra_body"] = {
+                "thinking": {
+                    "type": "enabled" if self.thinking_enabled else "disabled"
+                }
+            }
         if self.provider not in self._NO_RESPONSE_FORMAT:
             request_kwargs["response_format"] = {"type": "json_object"}
         return await self.client.chat.completions.create(**request_kwargs)

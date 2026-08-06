@@ -41,6 +41,7 @@ data/config.json
 data/seen.json
 data/summaries/
 data/radar/
+data/news/
 data/*.db
 data/*.db-shm
 data/*.db-wal

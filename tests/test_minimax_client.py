@@ -227,6 +227,30 @@ class TestOpenAIClientComplete:
 
         assert mock_create.call_args[1]["model"] == "deepseek-v4-flash"
 
+    def test_deepseek_can_disable_thinking_mode(self, monkeypatch):
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+        client = OpenAIClient(_make_config(
+            provider=AIProvider.DEEPSEEK,
+            model="deepseek-v4-flash",
+            api_key_env="DEEPSEEK_API_KEY",
+            thinking_enabled=False,
+        ))
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = '{"ok": true}'
+        mock_response.usage.prompt_tokens = 10
+        mock_response.usage.completion_tokens = 5
+
+        with patch.object(
+            client.client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+            asyncio.run(client.complete(system="return json", user="hello"))
+
+        assert mock_create.call_args[1]["extra_body"] == {
+            "thinking": {"type": "disabled"}
+        }
+
 
 class TestTemperatureFallback:
     """Retry-without-temperature path for models that deprecated temperature.

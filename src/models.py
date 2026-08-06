@@ -143,6 +143,7 @@ class AIConfig(BaseModel):
     throttle_sec: float = 0.0
     analysis_concurrency: int = 1
     enrichment_concurrency: int = 1
+    thinking_enabled: Optional[bool] = None
     languages: List[str] = Field(default_factory=lambda: ["en"])
     # Azure OpenAI specific; required when provider == AZURE
     azure_endpoint_env: Optional[str] = None
@@ -203,6 +204,8 @@ class RSSSourceConfig(BaseModel):
     enabled: bool = True
     category: Optional[str] = None
     content_extractor: Optional[str] = None
+    source_tier: Optional[str] = None
+    preferred: bool = False
 
 
 class RedditSubredditConfig(BaseModel):
@@ -354,6 +357,22 @@ class GDELTConfig(BaseModel):
     category: Optional[str] = None  # Horizon category label for downstream grouping
 
 
+class GoogleNewsQueryConfig(BaseModel):
+    """One independently balanced Google News discovery query."""
+
+    name: str
+    query: str
+    enabled: bool = True
+    language: Optional[str] = None
+    country: Optional[str] = None
+    ceid: Optional[str] = None
+    max_results: Optional[int] = Field(default=None, gt=0, le=100)
+    category: Optional[str] = None
+    source_tier: Optional[str] = None
+    preferred: bool = False
+    publisher_allowlist: List[str] = Field(default_factory=list)
+
+
 class GoogleNewsConfig(BaseModel):
     """Google News RSS search source configuration.
 
@@ -369,6 +388,7 @@ class GoogleNewsConfig(BaseModel):
     ceid: Optional[str] = None  # when None scraper derives it as "{country}:{language}"
     max_results: int = 100  # cap ~100
     category: Optional[str] = None
+    queries: List[GoogleNewsQueryConfig] = Field(default_factory=list)
 
 
 class SourcesConfig(BaseModel):
@@ -540,6 +560,42 @@ class StartupRadarConfig(BaseModel):
         return quotas
 
 
+class NewsDigestConfig(BaseModel):
+    """Settings for the multi-source comprehensive news report."""
+
+    enabled: bool = True
+    output_dir: str = "data/news"
+    docs_posts_dir: str = "docs/_posts"
+    prompt_version: str = "news-digest-v1"
+    max_input_items: int = Field(default=60, gt=0, le=150)
+    max_events: int = Field(default=8, gt=0, le=15)
+    max_items_per_publisher: int = Field(default=6, gt=0, le=30)
+    community_max_ratio: float = Field(default=0.05, ge=0, le=0.25)
+    excerpt_chars: int = Field(default=420, ge=100, le=1500)
+    max_output_tokens: int = Field(default=8000, ge=2000, le=16000)
+    categories: List[str] = Field(
+        default_factory=lambda: [
+            "宏观经济",
+            "政策监管",
+            "产业公司",
+            "科技产品",
+            "消费社会",
+        ]
+    )
+    preferred_publishers: List[str] = Field(
+        default_factory=lambda: [
+            "新华社",
+            "新华网",
+            "澎湃新闻",
+            "联合早报",
+            "BBC",
+            "CNN",
+            "朝日新闻",
+            "朝日新聞",
+        ]
+    )
+
+
 class Config(BaseModel):
     """Main configuration model."""
 
@@ -551,3 +607,4 @@ class Config(BaseModel):
     email: Optional[EmailConfig] = None
     webhook: Optional[WebhookConfig] = None
     startup_radar: StartupRadarConfig = Field(default_factory=StartupRadarConfig)
+    news_digest: NewsDigestConfig = Field(default_factory=NewsDigestConfig)
